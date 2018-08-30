@@ -2,6 +2,7 @@ package com.teacher.owldevelop.authenticationexample;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
@@ -12,8 +13,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.GlideDrawable;
+import com.bumptech.glide.request.animation.GlideAnimation;
+import com.bumptech.glide.request.target.SimpleTarget;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -38,7 +44,11 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 
+import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     CallbackManager callbackManager;
     GoogleSignInOptions gso;
     GoogleSignInClient mGoogleSignInClient;
+    ImageView avatar;
     int RC_SIGN_IN = 2046;
 
     @Override
@@ -130,11 +141,10 @@ public class MainActivity extends AppCompatActivity {
             try {
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = task.getResult(ApiException.class);
+              //  SetGoogleAvatar(account);
                 firebaseAuthWithGoogle(account);
             } catch (ApiException e) {
-                // Google Sign In failed, update UI appropriately
                 Log.w("googleFirebase", "Google sign in failed", e);
-                // ...
             }
         }
         else{
@@ -143,6 +153,16 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
     }
+
+    private void SetGoogleAvatar(FirebaseUser account) {
+        if (account != null){
+            String imgurl = account.getPhotoUrl().toString();
+            Glide.with(this).load(imgurl).into(avatar);
+            //    avatar.setImageBitmap(avatarBitmap);
+            avatar.invalidate();
+        }
+    }
+
 
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
         Log.d("googleFirebase", "firebaseAuthWithGoogle:" + acct.getId());
@@ -163,8 +183,6 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(MainActivity.this,"Authentication Failed.", Toast.LENGTH_SHORT).show();
                             updateUI(null);
                         }
-
-                        // ...
                     }
                 });
     }
@@ -240,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUI(FirebaseUser currentUser) {
-
+        SetGoogleAvatar(currentUser);
     }
 
     private void placeViews(){
@@ -309,12 +327,18 @@ public class MainActivity extends AppCompatActivity {
         facebookBtn.setY(950*scale);
         facebookBtn.setWidth((int)(1060*scale));
 
+        avatar = new ImageView(this);
+        avatar.setScaleType(ImageView.ScaleType.MATRIX);
+        avatar.setX(dm.widthPixels/2 - 70);
+        avatar.setY(0);
+
         layout.addView(loginEdt);
         layout.addView(passwordEdt);
         layout.addView(registerBtn);
         layout.addView(loginBtn);
         layout.addView(googleBtn);
         layout.addView(facebookBtn);
+        layout.addView(avatar);
         setContentView(layout);
     }
 }
