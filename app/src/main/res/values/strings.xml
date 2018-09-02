@@ -2,4 +2,5 @@
     <string name="app_name">AuthenticationExample</string>
     <string name="facebook_app_id">1879941602315001</string>
     <string name="fb_login_protocol_scheme">fb1879941602315001</string>
+    <string name="file_provider_authority" translatable="false">com.teacher.owldevelop.authenticationexample.fileprovider</string>
 </resources>

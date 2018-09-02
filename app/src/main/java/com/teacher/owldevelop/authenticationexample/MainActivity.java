@@ -1,9 +1,16 @@
 package com.teacher.owldevelop.authenticationexample;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Shader;
+import android.net.Uri;
+import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -13,6 +20,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -43,12 +51,19 @@ import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.auth.UserProfileChangeRequest;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import de.hdodenhof.circleimageview.CircleImageView;
+
+import static android.support.v4.graphics.TypefaceCompatUtil.getTempFile;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,8 +74,9 @@ public class MainActivity extends AppCompatActivity {
     CallbackManager callbackManager;
     GoogleSignInOptions gso;
     GoogleSignInClient mGoogleSignInClient;
-    ImageView avatar;
+    CircleImageView avatar;
     int RC_SIGN_IN = 2046;
+    private final int PICK_IMAGE_REQUEST = 71;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -148,13 +164,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         else{
+            if(requestCode == PICK_IMAGE_REQUEST){
+             avatar.setImageBitmap(ImagePicker.getImageFromResult(MainActivity.this, resultCode, data));
+            }
+            else
             callbackManager.onActivityResult(requestCode, resultCode, data);
         }
         super.onActivityResult(requestCode, resultCode, data);
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
     }
 
-    private void SetGoogleAvatar(FirebaseUser account) {
+    private void SetAvatar(FirebaseUser account) {
         if (account != null){
             String imgurl = account.getPhotoUrl().toString();
             Glide.with(this).load(imgurl).into(avatar);
@@ -186,15 +206,29 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
-
-    private void handleFacebookToken(AccessToken accessToken) {
+    FirebaseUser user;
+    private void handleFacebookToken(final AccessToken accessToken) {
         mAuth.signInWithCredential(FacebookAuthProvider.getCredential(accessToken.getToken())).addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 if (task.isSuccessful()) {
                     // Sign in success, update UI with the signed-in user's information
                     Log.d("Firebase", "createUserWithFacebook:success");
-                    FirebaseUser user = mAuth.getCurrentUser();
+                    user = mAuth.getCurrentUser();
+                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                            .setPhotoUri(Uri.parse("https://graph.facebook.com/" + accessToken.getUserId()+ "/picture?type=large"))
+                            .build();
+
+                    user.updateProfile(profileUpdates)
+                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Void> task) {
+                                    if (task.isSuccessful()) {
+                                        Log.d("firebase", "User profile updated.");
+                                        updateUI(user);
+                                    }
+                                }
+                            });
                     updateUI(user);
                 } else {
                     // If sign in fails, display a message to the user.
@@ -258,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUI(FirebaseUser currentUser) {
-        SetGoogleAvatar(currentUser);
+        SetAvatar(currentUser);
     }
 
     private void placeViews(){
@@ -327,10 +361,18 @@ public class MainActivity extends AppCompatActivity {
         facebookBtn.setY(950*scale);
         facebookBtn.setWidth((int)(1060*scale));
 
-        avatar = new ImageView(this);
-        avatar.setScaleType(ImageView.ScaleType.MATRIX);
-        avatar.setX(dm.widthPixels/2 - 70);
+        avatar = new CircleImageView(this);
+//        avatar.setScaleType(ImageView.ScaleType.FIT_XY);
+        avatar.setLayoutParams(new FrameLayout.LayoutParams((int)(140*scale), (int)(140*scale)));
+        avatar.setX(dm.widthPixels/2 - 70*scale);
         avatar.setY(0);
+
+        avatar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivityForResult(ImagePicker.getPickImageIntent(MainActivity.this), PICK_IMAGE_REQUEST);
+            }
+        });
 
         layout.addView(loginEdt);
         layout.addView(passwordEdt);
@@ -341,4 +383,6 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(avatar);
         setContentView(layout);
     }
+
+
 }
